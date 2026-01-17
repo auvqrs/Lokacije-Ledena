@@ -1,3 +1,8 @@
+// script.js - updated to compute and display total price for period and all-time,
+// and wire up totals to respect filters. Also minor layout-friendly changes.
+
+// (Assumes `db` (Supabase client) is already created in the page before this file runs)
+
 // DOM elements
 const addBtn = document.getElementById("dugme");
 const searchInput = document.getElementById("pretraga");
@@ -241,7 +246,7 @@ function renderInfoPanel(loc) {
 
         <section class="delivery-filter">
             <h3>Filter</h3>
-            <div class="filter-row two-cols">
+            <div class="filter-row">
                 <div class="col">
                     <label>Početni datum</label>
                     <input id="filter-start" type="date" />
@@ -258,7 +263,9 @@ function renderInfoPanel(loc) {
 
             <div class="totals">
                 <div><strong>Ukupno kg (period):</strong> <span id="total-kg">0</span></div>
+                <div><strong>Ukupno cena (period):</strong> <span id="total-price">0</span></div>
                 <div><strong>Ukupno kg (sve):</strong> <span id="total-kg-all">0</span></div>
+                <div><strong>Ukupno cena (sve):</strong> <span id="total-price-all">0</span></div>
             </div>
         </section>
 
@@ -413,19 +420,25 @@ async function loadDeliveriesForLocation(locationId, startDate = null, endDate =
 
         // compute totals for the selected period
         const totalKg = deliveries.reduce((s, d) => s + parseFloat(d.kg_delivered || 0), 0);
-        document.getElementById("total-kg").textContent = formatNumber(totalKg);
+        const totalPrice = deliveries.reduce((s, d) => s + parseFloat(d.price || 0), 0);
 
-        // compute total for all time (no filter)
+        document.getElementById("total-kg").textContent = formatNumber(totalKg);
+        document.getElementById("total-price").textContent = formatNumber(totalPrice);
+
+        // compute total for all time (no filter) - sum both kg and price
         const { data: allData, error: allErr } = await db
             .from("deliveries")
-            .select("kg_delivered")
+            .select("kg_delivered, price")
             .eq("location_id", locationId);
 
         if (!allErr && Array.isArray(allData)) {
-            const totalAll = allData.reduce((s, d) => s + parseFloat(d.kg_delivered || 0), 0);
-            document.getElementById("total-kg-all").textContent = formatNumber(totalAll);
+            const totalAllKg = allData.reduce((s, d) => s + parseFloat(d.kg_delivered || 0), 0);
+            const totalAllPrice = allData.reduce((s, d) => s + parseFloat(d.price || 0), 0);
+            document.getElementById("total-kg-all").textContent = formatNumber(totalAllKg);
+            document.getElementById("total-price-all").textContent = formatNumber(totalAllPrice);
         } else {
             document.getElementById("total-kg-all").textContent = "—";
+            document.getElementById("total-price-all").textContent = "—";
             if (allErr) handleSupabaseAuthError(allErr);
         }
     } catch (err) {
@@ -447,8 +460,16 @@ function renderDeliveriesList(deliveries) {
         const block = document.createElement("div");
         block.className = "delivery-block";
 
-        const date = new Date(d.delivered_at);
-        const dateStr = date.toLocaleDateString();
+        // Try to show date in local format; fall back
+        let dateStr = "";
+        try {
+            const date = new Date(d.delivered_at);
+            dateStr = date.toLocaleDateString();
+        } catch (e) {
+            dateStr = (d.delivered_at || "").split("T")[0];
+        }
+
+        const priceFormatted = formatNumber(d.price);
 
         block.innerHTML = `
             <div class="delivery-main">
@@ -456,8 +477,8 @@ function renderDeliveriesList(deliveries) {
                     <strong>${formatNumber(d.kg_delivered)} kg</strong>
                     <span class="small">• ${dateStr}</span>
                 </div>
-                <div class="delivery-price small">Cena: ${formatNumber(d.price)}</div>
             </div>
+            <div class="delivery-price small">Cena: ${priceFormatted} RSD</div>
             <div class="delivery-actions">
                 <button class="delete-delivery-btn" data-id="${d.id}" title="Obriši dostavu">Obriši</button>
             </div>
@@ -513,6 +534,7 @@ function handleResetFilter() {
 
 function formatNumber(n) {
     if (n === null || n === undefined || Number.isNaN(n)) return "0";
+    // Keep two decimals for prices; for kgs it's fine too
     return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 

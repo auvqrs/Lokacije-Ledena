@@ -1,3 +1,5 @@
+/* styles.css - updated for better mobile/responsiveness, price alignment and filter styles */
+
 * {
     margin: 0;
     padding: 0;
@@ -162,7 +164,8 @@ body {
     transform: scale(1.05);
 }
 
-/* Right column (info panel) */
+/* Right column (info panel)
+   NOTE: removed fixed height and allow scrolling when content overflows */
 .informacije {
     flex: 1;
     min-height: 360px;
@@ -170,8 +173,10 @@ body {
     border-radius: 12px;
     padding: 18px;
     border: 1px solid rgba(255,255,255,0.03);
-    height: 500px;
+    /* height: 500px; removed to be flexible on small screens */
     width: 100%;
+    max-height: calc(100vh - 170px);
+    overflow-y: auto;
 }
 
 /* Modal */
@@ -315,6 +320,24 @@ body {
     font-size: 14px;
 }
 
+/* Specific: make filter date inputs more visible & responsive */
+.filter-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+}
+
+.filter-row input[type="date"] {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #222;
+    background: #0f0f10;
+    color: #eaeaea;
+    font-size: 14px;
+}
+
 .actions-row {
     display: flex;
     gap: 8px;
@@ -339,15 +362,24 @@ body {
     margin-top: 6px;
 }
 
+/* Totals now include price and kg; responsive layout */
 .totals {
     margin-top: 8px;
     color: #c9d6da;
     font-size: 14px;
-    display: flex;
-    gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 10px 24px;
+    align-items: center;
     flex-wrap: wrap;
 }
 
+.totals div strong {
+    display: inline-block;
+    min-width: 130px;
+}
+
+/* Deliveries list */
 .deliveries-list {
     display: flex;
     flex-direction: column;
@@ -366,12 +398,15 @@ body {
     background: linear-gradient(180deg, #0f1112, #0b0b0c);
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.03);
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .delivery-main {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .delivery-meta strong {
@@ -384,31 +419,54 @@ body {
     font-size: 12px;
 }
 
+/* Price element: right-aligned on wide screens, stacked on small screens */
 .delivery-price {
     color: #9aa7ad;
     font-size: 13px;
+    white-space: nowrap;
+    margin-left: auto;
+    text-align: right;
+    min-width: 96px;
 }
 
-.delivery-actions button {
-    background: transparent;
-    border: 1px solid rgba(255, 70, 70, 0.15);
-    color: #ff6b6b;
-    padding: 6px 8px;
-    border-radius: 6px;
-    cursor: pointer;
+/* When on small screens, make price full width and aligned left under the meta */
+@media (max-width: 520px) {
+    .container {
+        flex-direction: column;
+        padding: 16px;
+    }
+    .sidebar {
+        width: 100%;
+    }
+    .lokacije {
+        grid-template-columns: 1fr;
+    }
+
+    .delivery-block {
+        align-items: flex-start;
+    }
+    .delivery-price {
+        margin-left: 0;
+        width: 100%;
+        text-align: left;
+        padding-top: 6px;
+        border-top: 1px dashed rgba(255,255,255,0.02);
+    }
+
+    .filter-row {
+        grid-template-columns: 1fr;
+    }
+
+    .totals {
+        grid-template-columns: 1fr;
+    }
+
+    .informacije {
+        max-height: none;
+    }
 }
 
-.delivery-actions button:hover {
-    background: rgba(255, 70, 70, 0.05);
-}
-
-/* info empty */
-.info-empty {
-    padding: 12px;
-    color: #9aa7ad;
-}
-
-/* Responsive */
+/* medium devices */
 @media (max-width: 900px) {
     .container {
         flex-direction: column;
@@ -419,10 +477,5 @@ body {
     }
     .lokacije {
         grid-template-columns: 1fr 1fr;
-    }
-}
-@media (max-width: 520px) {
-    .lokacije {
-        grid-template-columns: 1fr;
     }
 }

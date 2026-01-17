@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Lokacije Ledena</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="icon.png" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="top">
+        <img src="icon.png" width="60" alt="ikonica" />
+        <h1>LOKACIJE LEDENA</h1>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="search-lokacije">
+                <div class="search-header">
+                    <h2>LOKACIJE</h2>
+                    <button id="dugme" title="Dodaj lokaciju">+</button>
+                </div>
+
+                <input type="text" id="pretraga" placeholder="Unesi lokaciju (ime, adresa, grad)" aria-label="Pretraga lokacija">
+
+                <div class="lokacije" id="lokacije-list">
+                </div>
+            </div>
+        </aside>
+
+        <main class="informacije" id="info-panel" aria-live="polite">
+        </main>
+    </div>
+
+    <div id="modal-bg" class="hidden" aria-hidden="true">
+        <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <h3 id="modal-title">Dodaj Lokaciju</h3>
+
+            <input type="text" id="m-name" placeholder="Naziv Lokacije" />
+            <input type="text" id="m-address" placeholder="Adresa" />
+            <input type="text" id="m-city" placeholder="Grad" />
+
+            <div class="modal-actions">
+                <button id="save-location">Save</button>
+                <button id="close-modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const db = window.supabase.createClient(
+            "https://woctieivttvfpdqjzgml.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvY3RpZWl2dHR2ZnBkcWp6Z21sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1Njc4MTIsImV4cCI6MjA4NDE0MzgxMn0.YI8u1Vaw09F6kAvbXLutclir5Z5R6LwtHbxqdCwdjm8"
+        );
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>

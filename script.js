@@ -1,6 +1,4 @@
-// script.js - updated to compute and display total price for period and all-time,
-// and wire up totals to respect filters. Also minor layout-friendly changes.
-
+// script.js - updated to accept "kese" (bags) instead of direct kg input.
 // (Assumes `db` (Supabase client) is already created in the page before this file runs)
 
 // DOM elements
@@ -226,8 +224,8 @@ function renderInfoPanel(loc) {
             <h3>Dodaj Dostavu</h3>
             <div class="form-row two-cols">
                 <div class="col">
-                    <label>Kg delivered</label>
-                    <input id="d-kg" type="number" min="0" step="0.01" placeholder="kg" />
+                    <label>Broj kesa (kese)</label>
+                    <input id="d-bags" type="number" min="0" step="0.01" placeholder="kese" />
                 </div>
                 <div class="col">
                     <label>Cena (RSD)</label>
@@ -241,7 +239,7 @@ function renderInfoPanel(loc) {
             <div class="form-row actions-row">
                 <button id="add-delivery-btn">Dodaj</button>
             </div>
-            <p class="hint">Cena se automatski popunjava: 5 kg = 1 džak, profit po džaku = 250. Možete ručno promeniti cenu pre dodavanja.</p>
+            <p class="hint">Unesite broj kesa. 1 kesa = 5 kg. Profit po kesi = 250 RSD. Možete ručno promeniti cenu pre dodavanja.</p>
         </section>
 
         <section class="delivery-filter">
@@ -262,8 +260,11 @@ function renderInfoPanel(loc) {
             </div>
 
             <div class="totals">
+                <div><strong>Ukupno kesa (period):</strong> <span id="total-bags">0</span></div>
                 <div><strong>Ukupno kg (period):</strong> <span id="total-kg">0</span></div>
                 <div><strong>Ukupno cena (period):</strong> <span id="total-price">0</span></div>
+                <hr />
+                <div><strong>Ukupno kesa (sve):</strong> <span id="total-bags-all">0</span></div>
                 <div><strong>Ukupno kg (sve):</strong> <span id="total-kg-all">0</span></div>
                 <div><strong>Ukupno cena (sve):</strong> <span id="total-price-all">0</span></div>
             </div>
@@ -282,22 +283,21 @@ function renderInfoPanel(loc) {
     dDate.value = toLocalDateValue(new Date());
 
     // references to new inputs
-    const kgInput = document.getElementById("d-kg");
+    const bagsInput = document.getElementById("d-bags");
     const priceInput = document.getElementById("d-price");
 
     // initialize dataset flag
     priceInput.dataset.userEdited = "false";
 
-    // auto-fill price based on kg: price = (kg / 5) * 250
-    kgInput.addEventListener("input", () => {
-        const raw = parseFloat(kgInput.value);
+    // auto-fill price based on bags: price = bags * 250
+    bagsInput.addEventListener("input", () => {
+        const raw = parseFloat(bagsInput.value);
         if (Number.isNaN(raw) || raw <= 0) {
             if (priceInput.dataset.userEdited !== "true") priceInput.value = "";
             return;
         }
-        const computed = +(raw / 5) * 250;
+        const computed = raw * 250; // 250 RSD profit per bag
         const rounded = Number.isFinite(computed) ? computed.toFixed(2) : "";
-        // IMPORTANT: input[type=number] must receive plain numeric string (no thousands separators).
         if (priceInput.dataset.userEdited !== "true") {
             priceInput.value = rounded;
         }
@@ -305,7 +305,6 @@ function renderInfoPanel(loc) {
 
     // when user edits price manually mark it so auto-fill won't override
     priceInput.addEventListener("input", () => {
-        // consider it user edited as soon as the user changes value
         priceInput.dataset.userEdited = "true";
     });
 
@@ -325,22 +324,25 @@ async function handleAddDelivery() {
         return;
     }
 
-    const kgInput = document.getElementById("d-kg");
+    const bagsInput = document.getElementById("d-bags");
     const priceInput = document.getElementById("d-price");
     const dateInput = document.getElementById("d-date");
 
-    const kg = parseFloat(String(kgInput.value).replace(/,/g, ''));
+    const bags = parseFloat(String(bagsInput.value).replace(/,/g, ''));
     let price = parseFloat(String(priceInput.value).replace(/,/g, ''));
     const dateVal = dateInput.value; // format YYYY-MM-DD
 
-    if (Number.isNaN(kg) || kg <= 0) {
-        alert("Unesite validnu količinu (kg).");
+    if (Number.isNaN(bags) || bags <= 0) {
+        alert("Unesite validan broj kesa.");
         return;
     }
 
-    // If price is not set or NaN or zero, compute default
+    // Compute kg from bags
+    const kg = bags * 5;
+
+    // If price is not set or NaN or zero, compute default as bags * 250
     if (Number.isNaN(price) || price === 0) {
-        price = (kg / 5) * 250;
+        price = bags * 250;
     }
 
     if (!dateVal) {
@@ -373,7 +375,7 @@ async function handleAddDelivery() {
         }
 
         // clear inputs and reset price edit flag
-        kgInput.value = "";
+        bagsInput.value = "";
         priceInput.value = "";
         priceInput.dataset.userEdited = "false";
         dateInput.value = toLocalDateValue(new Date());
@@ -420,9 +422,11 @@ async function loadDeliveriesForLocation(locationId, startDate = null, endDate =
 
         // compute totals for the selected period
         const totalKg = deliveries.reduce((s, d) => s + parseFloat(d.kg_delivered || 0), 0);
+        const totalBags = totalKg / 5;
         const totalPrice = deliveries.reduce((s, d) => s + parseFloat(d.price || 0), 0);
 
         document.getElementById("total-kg").textContent = formatNumber(totalKg);
+        document.getElementById("total-bags").textContent = formatNumber(totalBags);
         document.getElementById("total-price").textContent = formatNumber(totalPrice);
 
         // compute total for all time (no filter) - sum both kg and price
@@ -433,11 +437,14 @@ async function loadDeliveriesForLocation(locationId, startDate = null, endDate =
 
         if (!allErr && Array.isArray(allData)) {
             const totalAllKg = allData.reduce((s, d) => s + parseFloat(d.kg_delivered || 0), 0);
+            const totalAllBags = totalAllKg / 5;
             const totalAllPrice = allData.reduce((s, d) => s + parseFloat(d.price || 0), 0);
             document.getElementById("total-kg-all").textContent = formatNumber(totalAllKg);
+            document.getElementById("total-bags-all").textContent = formatNumber(totalAllBags);
             document.getElementById("total-price-all").textContent = formatNumber(totalAllPrice);
         } else {
             document.getElementById("total-kg-all").textContent = "—";
+            document.getElementById("total-bags-all").textContent = "—";
             document.getElementById("total-price-all").textContent = "—";
             if (allErr) handleSupabaseAuthError(allErr);
         }
@@ -469,13 +476,15 @@ function renderDeliveriesList(deliveries) {
             dateStr = (d.delivered_at || "").split("T")[0];
         }
 
+        const kg = parseFloat(d.kg_delivered || 0);
+        const bags = kg / 5;
         const priceFormatted = formatNumber(d.price);
 
         block.innerHTML = `
             <div class="delivery-main">
                 <div class="delivery-meta">
-                    <strong>${formatNumber(d.kg_delivered)} kg</strong>
-                    <span class="small">• ${dateStr}</span>
+                    <strong>${formatNumber(bags)} kese</strong>
+                    <span class="small">• ${formatNumber(kg)} kg • ${dateStr}</span>
                 </div>
             </div>
             <div class="delivery-price small">Cena: ${priceFormatted} RSD</div>
@@ -534,7 +543,7 @@ function handleResetFilter() {
 
 function formatNumber(n) {
     if (n === null || n === undefined || Number.isNaN(n)) return "0";
-    // Keep two decimals for prices; for kgs it's fine too
+    // Keep two decimals for prices; for kgs and bags it's fine too
     return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
